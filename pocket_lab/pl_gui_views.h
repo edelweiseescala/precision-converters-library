@@ -2,7 +2,7 @@
  *   @file   pl_gui_views.h
  *   @brief  Pocket lab GUI views
 ******************************************************************************
-* Copyright (c) 2023-24 Analog Devices, Inc.
+* Copyright (c) 2023-25 Analog Devices, Inc.
 * All rights reserved.
 *
 * This software is proprietary to Analog Devices, Inc. and its licensors.
@@ -138,5 +138,6 @@ uint32_t pl_gui_get_active_device_index(void);
 float pl_gui_cnv_data_to_volt_without_vref(int32_t data, uint8_t chn);
 float pl_gui_cnv_data_to_volt_wrt_vref(int32_t data, uint8_t chn);
 int32_t pl_gui_cnv_code_to_straight_binary(uint32_t code, uint8_t chn);
+void pl_gui_remove(void);
 
 #endif // _PL_GUI_VIEWES_
