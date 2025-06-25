@@ -2,7 +2,7 @@
  *   @file    pl_gui_views.c
  *   @brief   Pocket lab GUI views
 ********************************************************************************
- * Copyright (c) 2023-24 Analog Devices, Inc.
+ * Copyright (c) 2023-25 Analog Devices, Inc.
  *
  * This software is proprietary to Analog Devices, Inc. and its licensors.
  * By using this software you agree to the terms of the associated
@@ -424,8 +424,7 @@ void pl_gui_perform_dmm_read(void)
 		read_cntr = 0;
 		for (cnt = 0; cnt < pl_gui_dmm_chn_cnt; cnt++) {
 			ibuf[0] = '\0';
-			if (lv_obj_get_state(pl_gui_dmm_chn_checkbox[cnt]) == (LV_STATE_CHECKED |
-					LV_STATE_DISABLED)) {
+			if (lv_obj_has_state(pl_gui_dmm_chn_checkbox[cnt],  LV_STATE_CHECKED)) {
 				/* get DMM reading for current channel and display it into text area */
 				ret = pl_gui_get_dmm_reading(ibuf, cnt, pl_gui_device_indx);
 				if (ret) {
@@ -473,8 +472,8 @@ void pl_gui_display_captured_data(uint8_t *buf, uint32_t rec_bytes)
 	while (indx < rec_bytes) {
 		if (pl_gui_capture_is_running) {
 			for (chn = 0; chn < pl_gui_capture_chn_cnt; chn++) {
-				if (lv_obj_get_state(pl_gui_capture_chn_checkbox[chn]) ==
-				    (LV_STATE_CHECKED | LV_STATE_DISABLED)) {
+				if (lv_obj_has_state(pl_gui_capture_chn_checkbox[chn],
+						     LV_STATE_CHECKED)) {
 					storage_bytes = pl_gui_capture_chn_info[chn]->storagebits >> 3;
 					memcpy((void *)&code, (void *)&buf[indx], storage_bytes);
 
@@ -599,8 +598,8 @@ void pl_gui_get_capture_chns_mask(uint32_t *chn_mask)
 
 	if (pl_gui_capture_is_running) {
 		for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
-			if (lv_obj_get_state(pl_gui_capture_chn_checkbox[cnt]) ==
-			    (LV_STATE_CHECKED | LV_STATE_DISABLED)) {
+			if (lv_obj_has_state(pl_gui_capture_chn_checkbox[cnt],
+					     LV_STATE_CHECKED)) {
 				*chn_mask |= mask;
 			}
 			mask <<= 1;
@@ -649,11 +648,11 @@ bool pl_gui_is_fft_running(void)
 static void pl_gui_btnmp_event_cb(lv_event_t *event)
 {
 	lv_obj_t *obj = lv_event_get_target(event);
-	const char *txt = lv_btnmatrix_get_button_text(obj,
+	const char *txt = lv_btnmatrix_get_btn_text(obj,
 			  lv_btnmatrix_get_selected_btn(obj));
 
 	if (strcmp(txt, LV_SYMBOL_BACKSPACE) == 0) {
-		lv_textarea_del_char(pl_gui_ta_views);
+		lv_textarea_delete_char(pl_gui_ta_views);
 	} else if (strcmp(txt, LV_SYMBOL_NEW_LINE) == 0) {
 		lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 		lv_event_send(pl_gui_ta_views, LV_EVENT_READY, NULL);
@@ -915,7 +914,7 @@ static void pl_gui_dmm_btn_event_cb(lv_event_t *event)
 		} else if (!strcmp(text, "Disable All")) {
 			if (!pl_gui_dmm_is_running) {
 				for (cnt = 0; cnt < pl_gui_dmm_chn_cnt; cnt++) {
-					lv_obj_clear_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_CHECKED);
+					lv_obj_remove_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_CHECKED);
 				}
 			}
 		} else {
@@ -924,11 +923,11 @@ static void pl_gui_dmm_btn_event_cb(lv_event_t *event)
 				lv_label_set_text(label, "Start");
 
 				for (cnt = 0; cnt < pl_gui_dmm_chn_cnt; cnt++) {
-					if (lv_obj_get_state(pl_gui_dmm_chn_checkbox[cnt]) == LV_STATE_CHECKED) {
-						lv_obj_clear_state(pl_gui_dmm_chn_checkbox[cnt],
-								   LV_STATE_CHECKED | LV_STATE_DISABLED);
+					if (lv_obj_has_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_CHECKED)) {
+						lv_obj_remove_state(pl_gui_dmm_chn_checkbox[cnt],
+								    LV_STATE_CHECKED);
 					} else {
-						lv_obj_clear_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_DISABLED);
+						lv_obj_remove_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_DISABLED);
 					}
 				}
 
@@ -937,12 +936,8 @@ static void pl_gui_dmm_btn_event_cb(lv_event_t *event)
 			} else {
 				lv_label_set_text(label, "Stop");
 				for (cnt = 0; cnt < pl_gui_dmm_chn_cnt; cnt++) {
-					if (lv_obj_get_state(pl_gui_dmm_chn_checkbox[cnt]) == LV_STATE_CHECKED) {
+					if (lv_obj_has_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_CHECKED)) {
 						num_of_enabled_channels++;
-						lv_obj_add_state(pl_gui_dmm_chn_checkbox[cnt],
-								 LV_STATE_CHECKED | LV_STATE_DISABLED);
-					} else {
-						lv_obj_add_state(pl_gui_dmm_chn_checkbox[cnt], LV_STATE_DISABLED);
 					}
 				}
 
@@ -981,7 +976,7 @@ static void pl_gui_capture_btn_event_cb(lv_event_t *event)
 		} else if (!strcmp(text, "Disable All")) {
 			if (!pl_gui_capture_is_running) {
 				for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
-					lv_obj_clear_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_CHECKED);
+					lv_obj_remove_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_CHECKED);
 				}
 			}
 		} else {
@@ -992,35 +987,30 @@ static void pl_gui_capture_btn_event_cb(lv_event_t *event)
 
 				/* Remove previously enabled channels from pl_gui_capture_chart_ovrly series */
 				for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
-					if (lv_obj_get_state(pl_gui_capture_chn_checkbox[cnt]) ==
-					    (LV_STATE_CHECKED | LV_STATE_DISABLED)) {
-						lv_obj_clear_state(pl_gui_capture_chn_checkbox[cnt],
-								   LV_STATE_CHECKED | LV_STATE_DISABLED);
+					if (lv_obj_has_state(pl_gui_capture_chn_checkbox[cnt],
+							     LV_STATE_CHECKED)) {
+						lv_obj_remove_state(pl_gui_capture_chn_checkbox[cnt],
+								    LV_STATE_CHECKED);
 						lv_chart_remove_series(pl_gui_capture_chart_ovrly, pl_gui_capture_chn_ser[cnt]);
 						pl_gui_capture_chn_ser[cnt] = NULL;
 					} else {
-						lv_obj_clear_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_DISABLED);
-
+						lv_obj_remove_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_DISABLED);
 					}
 				}
 				pl_gui_capture_is_running = !pl_gui_capture_is_running;
 			} else {
 				lv_label_set_text(label, "Stop");
 				lv_obj_set_style_bg_color(btn, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
-
+				lv_chart_set_point_count(pl_gui_capture_chart_ovrly, 400);
 				/* Add enabled channels to pl_gui_capture_chart_ovrly series */
 				for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
-					if (lv_obj_get_state(pl_gui_capture_chn_checkbox[cnt]) == LV_STATE_CHECKED) {
+					if (lv_obj_has_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_CHECKED)) {
 						num_of_enabled_channels++;
-						lv_obj_add_state(pl_gui_capture_chn_checkbox[cnt],
-								 LV_STATE_CHECKED | LV_STATE_DISABLED);
-					} else {
-						lv_obj_add_state(pl_gui_capture_chn_checkbox[cnt], LV_STATE_DISABLED);
 					}
+
 					pl_gui_capture_chn_ser[cnt] = lv_chart_add_series(pl_gui_capture_chart_ovrly,
 								      lv_palette_main(pl_gui_capture_chn_ser_col[cnt]),
 								      LV_CHART_AXIS_PRIMARY_Y);
-					lv_chart_set_point_count(pl_gui_capture_chart_ovrly, 400);
 				}
 				if (num_of_enabled_channels) {
 					pl_gui_capture_is_running = !pl_gui_capture_is_running;
@@ -1129,7 +1119,7 @@ int32_t pl_gui_create_power_up_view(lv_obj_t *parent,
 	LV_IMG_DECLARE(pl_logo);
 	obj = lv_img_create(parent);
 	lv_img_set_src(obj, &pl_logo);
-	lv_img_set_size_mode(obj, LV_IMAGE_SIZE_MODE_REAL);
+	lv_image_set_scale(obj, LV_SCALE_NONE);
 	lv_obj_align(obj, LV_ALIGN_TOP_MID, 0, -5);
 
 	return 0;
@@ -1583,12 +1573,12 @@ int32_t pl_gui_create_dmm_view(lv_obj_t *parent,
 		return ret;
 	}
 
-	pl_gui_dmm_chn_checkbox = calloc(pl_gui_dmm_chn_cnt, sizeof(lv_obj_t));
+	pl_gui_dmm_chn_checkbox = calloc(pl_gui_dmm_chn_cnt, sizeof(lv_obj_t *));
 	if (!pl_gui_dmm_chn_checkbox) {
 		return -ENOMEM;
 	}
 
-	pl_gui_dmm_chn_ta = calloc(pl_gui_dmm_chn_cnt, sizeof(lv_obj_t));
+	pl_gui_dmm_chn_ta = calloc(pl_gui_dmm_chn_cnt, sizeof(lv_obj_t *));
 	if (!pl_gui_dmm_chn_ta) {
 		ret = -ENOMEM;
 		goto error_dmm_chn_checkbox;
@@ -1754,15 +1744,6 @@ int32_t pl_gui_create_capture_view(lv_obj_t *parent,
 	lv_obj_set_size(pl_gui_capture_chart, 540, 340);
 	lv_obj_align_to(pl_gui_capture_chart, cont_col, LV_ALIGN_OUT_RIGHT_MID, 100, 0);
 
-	/* Display labels on x and y axises */
-	lv_chart_set_axis_tick(pl_gui_capture_chart,
-			       LV_CHART_AXIS_PRIMARY_Y,
-			       5,
-			       0,
-			       9,
-			       1,
-			       true,
-			       100);
 
 	/* Set the x and y axises range (Input data range) */
 	lv_chart_set_range(pl_gui_capture_chart,
@@ -1772,96 +1753,91 @@ int32_t pl_gui_create_capture_view(lv_obj_t *parent,
 	lv_chart_set_range(pl_gui_capture_chart,
 			   LV_CHART_AXIS_PRIMARY_X,
 			   0,
-			   PL_GUI_REQ_DATA_SAMPLES);
+			   PL_GUI_REQ_DATA_SAMPLES;
 
-	/* Create an overlay pl_gui_capture_chart for displaying actual data */
-	pl_gui_capture_chart_ovrly = lv_chart_create(parent);
-	lv_obj_set_size(pl_gui_capture_chart_ovrly, 540, 340);
-	lv_obj_align_to(pl_gui_capture_chart_ovrly,
-			cont_col,
-			LV_ALIGN_OUT_RIGHT_MID,
-			100,
-			0);
-	lv_chart_set_type(pl_gui_capture_chart_ovrly, LV_CHART_TYPE_LINE);
-	lv_chart_set_update_mode(pl_gui_capture_chart_ovrly,
-				 LV_CHART_UPDATE_MODE_CIRCULAR);
+			   /* Y-axis scale (auto labels from range) */
+			   lv_obj_t *y_scale = lv_scale_create(parent);
+			   lv_scale_set_mode(y_scale, LV_SCALE_MODE_VERTICAL_LEFT);
+			   lv_obj_set_height(y_scale, lv_obj_get_height(pl_gui_capture_chart));
+			   lv_obj_align_to(y_scale, pl_gui_capture_chart, LV_ALIGN_OUT_LEFT_MID, -10, 0);
+			   lv_scale_set_total_tick_count(y_scale, 9);
+			   lv_scale_set_major_tick_every(y_scale, 1);
+			   lv_scale_set_range(y_scale, PL_GUI_DATA_MIN_RANGE, PL_GUI_DATA_MAX_RANGE);
 
-	/* Set the x and y axises range (rescaled from actual input data range) */
-	lv_chart_set_range(pl_gui_capture_chart_ovrly,
-			   LV_CHART_AXIS_PRIMARY_Y,
-			   PL_GUI_CHART_MIN_PXL_RANGE,
-			   PL_GUI_CHART_MAX_PXL_RANGE);
-	lv_chart_set_range(pl_gui_capture_chart_ovrly,
-			   LV_CHART_AXIS_PRIMARY_X,
-			   0,
-			   PL_GUI_REQ_DATA_SAMPLES);
+			   /* X-axis scale (auto labels from range) */
+			   lv_obj_t *scale_x = lv_scale_create(parent);
+			   lv_scale_set_mode(scale_x, LV_SCALE_MODE_HORIZONTAL_BOTTOM);
+			   lv_obj_set_width(scale_x, lv_obj_get_width(pl_gui_capture_chart));
+			   lv_obj_align_to(scale_x, pl_gui_capture_chart, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+			   lv_scale_set_total_tick_count(scale_x, 9);
+			   lv_scale_set_major_tick_every(scale_x, 1);
+			   lv_scale_set_range(scale_x, 0, PL_GUI_REQ_DATA_SAMPLES);
 
-	/* Define the number of tick labels */
-	int num_ticks = 9; // Adjust as needed
-	int tick_spacing = 60; // Adjust for better spacing
+			   /* Create an overlay pl_gui_capture_chart for displaying actual data */
+			   pl_gui_capture_chart_ovrly = lv_chart_create(parent);
+			   lv_obj_set_size(pl_gui_capture_chart_ovrly, 540, 340);
+			   lv_obj_align_to(pl_gui_capture_chart_ovrly,
+					   cont_col,
+					   LV_ALIGN_OUT_RIGHT_MID,
+					   100,
+					   0);
+			   lv_chart_set_type(pl_gui_capture_chart_ovrly, LV_CHART_TYPE_LINE);
+			   lv_chart_set_update_mode(pl_gui_capture_chart_ovrly,
+					   LV_CHART_UPDATE_MODE_CIRCULAR);
 
-	/* Generate and position labels dynamically */
-	for (i = 0; i < num_ticks; i++) {
-		float freq_value = (PL_GUI_REQ_DATA_SAMPLES) * i / (num_ticks - 1);
-		/* Convert frequency value to a string */
-		char tick_label[10];
+			   /* Set the x and y axises range (rescaled from actual input data range) */
+			   lv_chart_set_range(pl_gui_capture_chart_ovrly,
+					      LV_CHART_AXIS_PRIMARY_Y,
+					      PL_GUI_CHART_MIN_PXL_RANGE,
+					      PL_GUI_CHART_MAX_PXL_RANGE);
+			   lv_chart_set_range(pl_gui_capture_chart_ovrly,
+					      LV_CHART_AXIS_PRIMARY_X,
+					      0,
+					      PL_GUI_REQ_DATA_SAMPLES);
 
-		sprintf(tick_label, "%.f", freq_value);
-
-		/* Create label */
-		lv_obj_t *lbl = lv_label_create(parent);
-		lv_label_set_text(lbl, tick_label);
-
-		lv_obj_align_to(lbl,
-				pl_gui_capture_chart_ovrly,
-				LV_ALIGN_OUT_BOTTOM_MID,
-				(i - num_ticks / 2) * tick_spacing,
-				10);
-	}
-
-	/* Do not display points on the data */
-#if LV_VERSION_CHECK(9,0,0)
-	lv_obj_set_style_size(pl_gui_capture_chart_ovrly, 0, 0, LV_PART_INDICATOR);
+			   /* Do not display points on the data */
+#if LV_VERSION_CHECK(9,3,0)
+			   lv_obj_set_style_size(pl_gui_capture_chart_ovrly, 0, 0, LV_PART_INDICATOR);
 #else
-	lv_obj_set_style_size(pl_gui_capture_chart_ovrly, 0, LV_PART_INDICATOR);
+			   lv_obj_set_style_size(pl_gui_capture_chart_ovrly, 0, LV_PART_INDICATOR);
 #endif
 
-	/* Get the name of all channels and channel count */
-	dropdown_list[0] = '\0';
-	ret = pl_gui_get_chn_names(dropdown_list,
-				   &pl_gui_capture_chn_cnt,
-				   pl_gui_device_indx);
+			   /* Get the name of all channels and channel count */
+			   dropdown_list[0] = '\0';
+			   ret = pl_gui_get_chn_names(dropdown_list,
+					   &pl_gui_capture_chn_cnt,
+					   pl_gui_device_indx);
 	if (ret) {
-		return ret;
-	}
+	return ret;
+}
 
-	pl_gui_capture_chn_checkbox = calloc(pl_gui_capture_chn_cnt, sizeof(lv_obj_t));
-	if (!pl_gui_capture_chn_checkbox) {
-		return -ENOMEM;
-	}
+pl_gui_capture_chn_checkbox = calloc(pl_gui_capture_chn_cnt, sizeof(lv_obj_t*));
+if (!pl_gui_capture_chn_checkbox) {
+	return -ENOMEM;
+}
 
-	pl_gui_capture_chn_ser = calloc(pl_gui_capture_chn_cnt, sizeof(lv_obj_t));
-	if (!pl_gui_capture_chn_ser) {
-		ret = -ENOMEM;
-		goto error_capture_chn_ser;
-	}
+pl_gui_capture_chn_ser = calloc(pl_gui_capture_chn_cnt, sizeof(lv_obj_t*));
+if (!pl_gui_capture_chn_ser) {
+	ret = -ENOMEM;
+	goto error_capture_chn_ser;
+}
 
-	pl_gui_capture_chn_info = calloc(pl_gui_capture_chn_cnt,
-					 sizeof(struct scan_type));
-	if (!pl_gui_capture_chn_info) {
-		ret = -ENOMEM;
-		goto error_chn_info;
-	}
+pl_gui_capture_chn_info = calloc(pl_gui_capture_chn_cnt,
+				 sizeof(struct scan_type));
+if (!pl_gui_capture_chn_info) {
+	ret = -ENOMEM;
+	goto error_chn_info;
+}
 
-	pl_gui_capture_offset = calloc(pl_gui_capture_chn_cnt, sizeof(int32_t));
-	if (!pl_gui_capture_offset) {
-		ret = -ENOMEM;
-		goto error_offset;
-	}
+pl_gui_capture_offset = calloc(pl_gui_capture_chn_cnt, sizeof(int32_t));
+if (!pl_gui_capture_offset) {
+	ret = -ENOMEM;
+	goto error_offset;
+}
 
-	/* Display checkboxes for capture view channels */
-	for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
-		ibuf[0] = '\0';
+/* Display checkboxes for capture view channels */
+for (cnt = 0; cnt < pl_gui_capture_chn_cnt; cnt++) {
+	ibuf[0] = '\0';
 		label_str[0] = '\0';
 		chn_name[0] = '\0';
 		j = 0;
@@ -1899,14 +1875,14 @@ int32_t pl_gui_create_capture_view(lv_obj_t *parent,
 
 	return 0;
 
-error_offset:
-	free(pl_gui_capture_chn_info);
-error_chn_info:
-	free(pl_gui_capture_chn_ser);
-error_capture_chn_ser:
-	free(pl_gui_capture_chn_checkbox);
+	       error_offset:
+	       free(pl_gui_capture_chn_info);
+	       error_chn_info:
+	       free(pl_gui_capture_chn_ser);
+	       error_capture_chn_ser:
+	       free(pl_gui_capture_chn_checkbox);
 
-	return ret;
+	       return ret;
 }
 
 /**
@@ -1926,7 +1902,7 @@ int32_t pl_gui_create_analysis_view(lv_obj_t *parent,
 	/* Define the number of tick labels */
 	int num_ticks = 9; // Adjust as needed
 	int tick_spacing = 60; // Adjust for better spacing
-	uint8_t i;
+	int i;
 
 	/* Get device names */
 	dropdown_list[0] = '\0';
@@ -1969,7 +1945,7 @@ int32_t pl_gui_create_analysis_view(lv_obj_t *parent,
 
 	/* Create the FFT Start/Stop Button */
 	start_btn = lv_btn_create(parent);
-	lv_obj_set_size(start_btn, 100, 40);
+	lv_obj_set_size(start_btn, 105, 50);
 	lv_obj_align_to(start_btn,
 			pl_gui_fft_chn_select,
 			LV_ALIGN_OUT_RIGHT_TOP,
@@ -1992,18 +1968,7 @@ int32_t pl_gui_create_analysis_view(lv_obj_t *parent,
 	lv_obj_set_size(pl_gui_fft_chart, 600, 340);
 	lv_obj_set_pos(pl_gui_fft_chart, 30, 50);
 
-	/* Display labels on y axis */
-	lv_chart_set_axis_tick(pl_gui_fft_chart,
-			       LV_CHART_AXIS_PRIMARY_Y,
-			       5,
-			       0,
-			       9,
-			       1,
-			       true,
-			       100);
-
 	sampling_freq = param->device_params->fft_params->sample_rate;
-
 	/* Set the x and y axises range (input data range) */
 	lv_chart_set_range(pl_gui_fft_chart,
 			   LV_CHART_AXIS_PRIMARY_Y,
@@ -2054,9 +2019,16 @@ int32_t pl_gui_create_analysis_view(lv_obj_t *parent,
 		lv_obj_align_to(mid_lbl, pl_gui_fft_chart, LV_ALIGN_OUT_BOTTOM_MID,
 				(0 - num_ticks / 2) * tick_spacing, 10);
 	}
-
+	/* Y-axis Labels */
+	lv_obj_t *y_scale = lv_scale_create(parent);
+	lv_scale_set_mode(y_scale, LV_SCALE_MODE_VERTICAL_LEFT);
+	lv_obj_set_height(y_scale, lv_obj_get_height(pl_gui_fft_chart));
+	lv_obj_align_to(y_scale, pl_gui_fft_chart, LV_ALIGN_OUT_LEFT_MID, -7, 0);
+	lv_scale_set_total_tick_count(y_scale, 9);
+	lv_scale_set_major_tick_every(y_scale, 1);
+	lv_scale_set_range(y_scale, -200, 0);
 	/* Do not display points on the data */
-#if LV_VERSION_CHECK(9,0,0)
+#if LV_VERSION_CHECK(9,3,0)
 	lv_obj_set_style_size(pl_gui_fft_chart, 0, 0, LV_PART_INDICATOR);
 #else
 	lv_obj_set_style_size(pl_gui_fft_chart, 0, LV_PART_INDICATOR);
@@ -2105,7 +2077,7 @@ int32_t pl_gui_create_analysis_view(lv_obj_t *parent,
 	lv_label_set_text(rms_noise_label, "");
 	lv_obj_set_pos(rms_noise_label, 640, 360);
 
-	pl_gui_fft_chn_ser = calloc(pl_gui_fft_chn_cnt, sizeof(lv_obj_t));
+	pl_gui_fft_chn_ser = calloc(pl_gui_fft_chn_cnt, sizeof(lv_obj_t*));
 	if (!pl_gui_capture_chn_ser) {
 		return -ENOMEM;
 	}
@@ -2136,7 +2108,6 @@ int32_t pl_gui_create_about_view(lv_obj_t *parent,
 	LV_IMG_DECLARE(adi_logo);
 	obj = lv_img_create(parent);
 	lv_img_set_src(obj, &adi_logo);
-	lv_img_set_size_mode(obj, LV_IMAGE_SIZE_MODE_REAL);
 	lv_obj_align(obj, LV_ALIGN_TOP_MID, 0, -5);
 
 	/* Display labels */
@@ -2210,7 +2181,9 @@ static int32_t pl_gui_create_views(struct pl_gui_desc **desc,
 	}
 
 	/* Create a Tab view object, and the views within it */
-	tabview = lv_tabview_create(lv_scr_act(), LV_DIR_BOTTOM, 50);
+	tabview = lv_tabview_create(lv_scr_act());
+	lv_tabview_set_tab_bar_position(tabview, LV_DIR_BOTTOM);
+	lv_tabview_set_tab_bar_size(tabview, 50);
 
 	/* Button matrix creation and mapping */
 	pl_gui_add_btnmap_kb();
@@ -2272,4 +2245,15 @@ int32_t pl_gui_init(struct pl_gui_desc **desc,
 	pl_structure->event2 = param->event2;
 
 	return 0;
+}
+
+/**
+ * @brief 	Remove Pocket Lab resources
+ * @return	None
+ */
+void pl_gui_remove(void)
+{
+	lv_obj_del(lv_scr_act());
+	lv_deinit();
+	pl_gui_device_indx = 0;
 }

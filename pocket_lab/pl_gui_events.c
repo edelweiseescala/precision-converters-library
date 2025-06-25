@@ -2,7 +2,7 @@
  *   @file    pl_gui_events.c
  *   @brief   Pocket lab GUI event handling
 ********************************************************************************
- * Copyright (c) 2023 Analog Devices, Inc.
+ * Copyright (c) 2023,2025 Analog Devices, Inc.
  *
  * This software is proprietary to Analog Devices, Inc. and its licensors.
  * By using this software you agree to the terms of the associated
@@ -79,7 +79,7 @@ int32_t pl_gui_event_read(uint8_t *buf, uint32_t len)
 	uint32_t chn_mask;
 	uint32_t chn_mask_temp;
 	uint32_t cnt;
-	uint32_t dev_indx;
+	uint32_t dev_indx = 0;
 	struct scan_type chn_info;
 
 	if (!buf) {

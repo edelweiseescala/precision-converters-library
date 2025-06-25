@@ -2,7 +2,7 @@
  *   @file    pl_gui_iio_wrapper.c
  *   @brief   Pocket lab GUI IIO wrapper interfaces
 ********************************************************************************
- * Copyright (c) 2023 Analog Devices, Inc.
+ * Copyright (c) 2023,2025 Analog Devices, Inc.
  *
  * This software is proprietary to Analog Devices, Inc. and its licensors.
  * By using this software you agree to the terms of the associated
@@ -478,7 +478,7 @@ int32_t pl_gui_write_chn_attr(const char *attr_name, char *attr_val,
 	}
 
 	/* Write attribute value */
-	iio_dev->channels[chn_indx].attributes[attr_indx].show(
+	iio_dev->channels[chn_indx].attributes[attr_indx].store(
 		pl_gui_iio_init_params->devs[dev_indx].dev,
 		buf, strlen(buf), &chn_info,
 		iio_dev->channels[chn_indx].attributes[attr_indx].priv);
