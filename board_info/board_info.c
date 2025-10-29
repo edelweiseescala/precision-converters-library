@@ -59,6 +59,23 @@
 #define SDP_EEPROM_DATA_INDX			10
 #define SDP_EEPROM_RECORD_FOOTER_LEN	3
 
+/* RPI HAT+ EEPROM specific macros */
+#define RPI_HAT_EEPROM_DATA_MAX_LEN			256
+#define RPI_HAT_EEPROM_HEADER_LEN			12
+#define RPI_HAT_EEPROM_HEADER_SIGN_LEN		4
+#define RPI_HAT_EEPROM_HEADER_VERSION_INDX	4
+#define RPI_HAT_EEPROM_HEADER_ATOMS_INDX	6
+#define RPI_HAT_EEPROM_HEADER_EEPLEN_INDX	8
+#define RPI_HAT_EEPROM_DATA_INDX			12
+#define RPI_HAT_EEPROM_BASE_ATOM_LEN		8
+#define RPI_HAT_EEPROM_ATOM_TYPE_INDX		0
+#define RPI_HAT_EEPROM_ATOM_TYPE_LEN		2
+#define RPI_HAT_EEPROM_ATOM_COUNT_INDX		2
+#define RPI_HAT_EEPROM_ATOM_COUNT_LEN		2
+#define RPI_HAT_EEPROM_ATOM_DLEN_INDX		4
+#define RPI_HAT_EEPROM_ATOM_DLEN_LEN		4
+#define RPI_HAT_EEPROM_CRC16_LEN			2
+
 /******************************************************************************/
 /******************** Variables and User Defined Data Types *******************/
 /******************************************************************************/
@@ -68,6 +85,9 @@
 /******************************************************************************/
 
 static int32_t read_and_parse_sdp_eeprom(struct no_os_eeprom_desc *desc,
+		struct board_info *board_info);
+
+static int32_t read_and_parse_rpi_hat_plus_eeprom(struct no_os_eeprom_desc *desc,
 		struct board_info *board_info);
 
 /******************************************************************************/
@@ -92,6 +112,12 @@ int32_t read_board_info(struct no_os_eeprom_desc *desc,
 	do {
 		/* Read and parse SDP EEPROM format */
 		ret = read_and_parse_sdp_eeprom(desc, board_info);
+		if (!ret) {
+			break;
+		}
+
+		/* Read and parse RPI HAT+ EEPROM format */
+		ret = read_and_parse_rpi_hat_plus_eeprom(desc, board_info);
 		if (!ret) {
 			break;
 		}
@@ -215,6 +241,88 @@ static int32_t read_and_parse_sdp_eeprom(struct no_os_eeprom_desc *desc,
 		}
 
 		index += record_len;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief 	Read and parse RPI HAT+ EEPROM data format
+ * @param	desc[in] - EEPROM descriptor
+ * @param	board_info[in, out] - Pointer to board info structure
+ * @return	0 in case of success, negative error code otherwise
+ */
+static int32_t read_and_parse_rpi_hat_plus_eeprom(struct no_os_eeprom_desc *desc,
+		struct board_info *board_info)
+{
+	uint8_t data_index = 0;
+	uint16_t atom_count;
+	uint16_t atom_type;
+	uint16_t num_atoms;
+	uint16_t crc16;
+	uint32_t dlen;
+	uint32_t eeprom_len;
+	int32_t ret;
+	uint64_t address = 0x0;
+
+	char eeprom_data[RPI_HAT_EEPROM_DATA_MAX_LEN];
+	char hw_id[SDP_EEPROM_LEGACY_BOARD_ID_LEN];
+
+	if (!desc || !board_info) {
+		return -EINVAL;
+	}
+
+	/* Read EEPROM header information */
+	ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+				RPI_HAT_EEPROM_HEADER_LEN);
+	if (ret) {
+		return ret;
+	}
+
+	/* Validate if correct RPI HAT PLUS EEPROM format */
+	if (!(eeprom_data[0] == 'R' && eeprom_data[1] == '-' && eeprom_data[2] == 'P' && eeprom_data[3] == 'i')) {
+		return -EINVAL;
+	}
+
+	num_atoms = eeprom_data[RPI_HAT_EEPROM_HEADER_ATOMS_INDX];
+	eeprom_len = eeprom_data[RPI_HAT_EEPROM_HEADER_EEPLEN_INDX];
+	
+	address = RPI_HAT_EEPROM_HEADER_LEN;
+	/* Read EEPROM atoms */
+	for(int i = 0; i < num_atoms; i++) {
+		ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+					RPI_HAT_EEPROM_BASE_ATOM_LEN);
+		if (ret) {
+			return ret;
+		}
+		atom_type = eeprom_data[RPI_HAT_EEPROM_ATOM_TYPE_INDX];
+		atom_count = eeprom_data[RPI_HAT_EEPROM_ATOM_COUNT_INDX];
+		dlen = eeprom_data[RPI_HAT_EEPROM_ATOM_DLEN_INDX];
+
+		address += 8;
+
+		ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+					dlen);
+		if (ret) {
+			return ret;
+		}
+		if(atom_type == 1) {
+			data_index = 0;
+			uint8_t vendor_length = eeprom_data[20];
+			uint8_t product_length = eeprom_data[21];
+			uint8_t board_name_idx = 22 + vendor_length;
+
+			data_index = 0;
+			for(int j = board_name_idx; j < board_name_idx + product_length; j++){
+				board_info->board_name[data_index] = eeprom_data[j];
+				board_info->board_id[data_index] = eeprom_data[j];
+				data_index++;
+			}
+			board_info->board_id[data_index] = '\0';
+			board_info->board_name[data_index] = '\0';
+		}
+
+		address += dlen;
 	}
 
 	return 0;
