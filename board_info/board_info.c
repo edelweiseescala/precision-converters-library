@@ -59,6 +59,26 @@
 #define SDP_EEPROM_DATA_INDX			10
 #define SDP_EEPROM_RECORD_FOOTER_LEN	3
 
+/* RPI HAT+ EEPROM specific macros */
+#define RPI_HAT_EEPROM_DATA_MAX_LEN			256
+#define RPI_HAT_EEPROM_HEADER_LEN			12
+#define RPI_HAT_EEPROM_HEADER_VERSION_INDX	4
+#define RPI_HAT_EEPROM_HEADER_ATOMS_INDX	6
+#define RPI_HAT_EEPROM_HEADER_EEPLEN_INDX	8
+#define RPI_HAT_EEPROM_BASE_ATOM_LEN		8
+#define RPI_HAT_EEPROM_ATOM_TYPE_INDX		0
+#define RPI_HAT_EEPROM_ATOM_COUNT_INDX		2
+#define RPI_HAT_EEPROM_ATOM_DLEN_INDX		4
+#define RPI_HAT_EEPROM_ATOM_HEADER_LEN		8
+#define RPI_HAT_PLUS_VERSION				0x02
+#define RPI_HAT_PLUS_PRODUCT_UUID_LEN		16
+#define RPI_HAT_PLUS_PRODUCT_ID_LEN			2
+#define RPI_HAT_PLUS_PRODUCT_VERSION_LEN	2
+#define RPI_HAT_PLUS_VENDOR_LEN_INDX		20
+#define RPI_HAT_PLUS_PRODUCT_LEN_INDX		21
+#define RPI_HAT_PLUS_VENDOR_INDX			22
+
+
 /******************************************************************************/
 /******************** Variables and User Defined Data Types *******************/
 /******************************************************************************/
@@ -68,6 +88,9 @@
 /******************************************************************************/
 
 static int32_t read_and_parse_sdp_eeprom(struct no_os_eeprom_desc *desc,
+		struct board_info *board_info);
+
+static int32_t read_and_parse_rpi_hat_plus_eeprom(struct no_os_eeprom_desc *desc,
 		struct board_info *board_info);
 
 /******************************************************************************/
@@ -92,6 +115,12 @@ int32_t read_board_info(struct no_os_eeprom_desc *desc,
 	do {
 		/* Read and parse SDP EEPROM format */
 		ret = read_and_parse_sdp_eeprom(desc, board_info);
+		if (!ret) {
+			break;
+		}
+
+		/* Read and parse RPI HAT+ EEPROM format */
+		ret = read_and_parse_rpi_hat_plus_eeprom(desc, board_info);
 		if (!ret) {
 			break;
 		}
@@ -215,6 +244,125 @@ static int32_t read_and_parse_sdp_eeprom(struct no_os_eeprom_desc *desc,
 		}
 
 		index += record_len;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief 	Read and parse RPI HAT+ EEPROM data format
+ * @param	desc[in] - EEPROM descriptor
+ * @param	board_info[in, out] - Pointer to board info structure
+ * @return	0 in case of success, negative error code otherwise
+ */
+static int32_t read_and_parse_rpi_hat_plus_eeprom(struct no_os_eeprom_desc *desc,
+		struct board_info *board_info)
+{
+	uint8_t board_name_idx;
+	uint8_t data_index;
+	uint8_t product_length;
+	uint8_t vendor_name_idx;
+	uint8_t vendor_length;
+	uint16_t atom_count;
+	uint16_t atom_type;
+	uint16_t crc16;
+	uint16_t num_atoms;
+	uint16_t product_id;
+	uint16_t product_version;
+	uint32_t dlen;
+	uint32_t eeprom_len;
+	int32_t ret;
+	uint64_t address = 0x0;
+	int vendor_atom_indx;
+	char eeprom_data[RPI_HAT_EEPROM_DATA_MAX_LEN];
+	char product_uuid[RPI_HAT_PLUS_PRODUCT_UUID_LEN];
+	char vendor[RPI_HAT_EEPROM_DATA_MAX_LEN];
+	char device_tree_overlay[RPI_HAT_EEPROM_DATA_MAX_LEN];
+
+	if (!desc || !board_info)
+		return -EINVAL;
+
+	/* Read EEPROM header information */
+	ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+				RPI_HAT_EEPROM_HEADER_LEN);
+	if (ret)
+		return ret;
+
+	/* Validate if correct RPI HAT EEPROM format */
+	if (strncmp(eeprom_data, "R-Pi", 4) != 0)
+		return -EINVAL;
+
+	/* Validate if correct RPI HAT + version*/
+	if (eeprom_data[RPI_HAT_EEPROM_HEADER_VERSION_INDX] != RPI_HAT_PLUS_VERSION)
+		return -EINVAL;
+
+	num_atoms = eeprom_data[RPI_HAT_EEPROM_HEADER_ATOMS_INDX];
+	eeprom_len = eeprom_data[RPI_HAT_EEPROM_HEADER_EEPLEN_INDX];
+	address = RPI_HAT_EEPROM_HEADER_LEN;
+
+	/* Read EEPROM atoms */
+	for(int i = 0; i < num_atoms; i++) {
+		ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+					RPI_HAT_EEPROM_BASE_ATOM_LEN);
+		if (ret)
+			return ret;
+
+		atom_type = eeprom_data[RPI_HAT_EEPROM_ATOM_TYPE_INDX];
+		atom_count = eeprom_data[RPI_HAT_EEPROM_ATOM_COUNT_INDX];
+		dlen = eeprom_data[RPI_HAT_EEPROM_ATOM_DLEN_INDX];
+		address += RPI_HAT_EEPROM_ATOM_HEADER_LEN;
+
+		ret = no_os_eeprom_read(desc, address, (uint8_t *)eeprom_data,
+					dlen - 2);
+		if (ret)
+			return ret;
+
+		if (atom_type == 1) {
+			data_index = 0;
+			vendor_atom_indx = 0;
+			for(int j = vendor_atom_indx; j < RPI_HAT_PLUS_PRODUCT_UUID_LEN; j++){
+				product_uuid[data_index] = eeprom_data[j];
+				data_index++;
+			}
+			
+			vendor_atom_indx = RPI_HAT_PLUS_PRODUCT_UUID_LEN;
+			product_id = eeprom_data[vendor_atom_indx];
+			vendor_atom_indx += RPI_HAT_PLUS_PRODUCT_ID_LEN;
+			product_version = eeprom_data[vendor_atom_indx];
+			vendor_atom_indx += RPI_HAT_PLUS_PRODUCT_VERSION_LEN;
+
+			vendor_length = eeprom_data[RPI_HAT_PLUS_VENDOR_LEN_INDX];
+			product_length = eeprom_data[RPI_HAT_PLUS_PRODUCT_LEN_INDX];
+			vendor_name_idx = RPI_HAT_PLUS_VENDOR_INDX;
+			board_name_idx = RPI_HAT_PLUS_VENDOR_INDX + vendor_length;
+
+			data_index = 0;
+			for(int j = vendor_name_idx; j < vendor_name_idx + vendor_length; j++){
+				vendor[data_index] = eeprom_data[j];
+				data_index++;
+			}
+			vendor[data_index] = '\0';
+			
+			data_index = 0;
+			for(int j = board_name_idx; j < board_name_idx + product_length; j++){
+				board_info->board_name[data_index] = eeprom_data[j];
+				board_info->board_id[data_index] = eeprom_data[j];
+				data_index++;
+			}
+			board_info->board_id[data_index] = '\0';
+			board_info->board_name[data_index] = '\0';
+		} else if (atom_type == 3) {
+			data_index = 0;
+			for(int j = 0; j < dlen - 2; j++){
+				device_tree_overlay[data_index] = eeprom_data[j];
+				data_index++;
+			}
+			device_tree_overlay[data_index] = '\0';
+		}  else if (strcmp(eeprom_data, "Analog Devices Inc.") && atom_type == 4) {
+			// TODO - Read and parse ATOM 4 data
+		}
+
+		address += dlen;
 	}
 
 	return 0;
