@@ -323,7 +323,7 @@ static int32_t process_vendor_info_atom(struct hatplus_atom *atom,
 }
 
 /**
- * @brief 	Process custom data atom to extract dongle features
+ * @brief 	Process custom data atom to extract bridge features
  * @param 	atom[in] - Custom data atom from HAT+ EEPROM
  * @param 	board_info[in, out] - Board info structure to populate
  * @return 	0 in case of success, negative error code otherwise
@@ -346,7 +346,7 @@ static int32_t process_custom_data_atom(struct hatplus_atom *atom,
 	if (!tlv)
 		return -EINVAL;
 
-	while (tlv && feature_count < MAX_DONGLE_FEATURE) {
+	while (tlv && feature_count < MAX_BRIDGE_FEATURE) {
 		tag = hatplus_tlv_tag(tlv);
 		len = hatplus_tlv_len(tlv);
 
@@ -376,7 +376,7 @@ static int32_t process_custom_data_atom(struct hatplus_atom *atom,
 			feature_buf[len] = '\0';
 
 			token_start = feature_buf;
-			while (feature_count < MAX_DONGLE_FEATURE && token_start && *token_start) {
+			while (feature_count < MAX_BRIDGE_FEATURE && token_start && *token_start) {
 				token_end = strchr(token_start, ',');
 				if (token_end)
 					token_len = (size_t)(token_end - token_start);
@@ -384,11 +384,11 @@ static int32_t process_custom_data_atom(struct hatplus_atom *atom,
 					token_len = strlen(token_start);
 
 				if (token_len > 0) {
-					board_info->dongle_features[feature_count] = malloc(token_len + 1);
-					if (board_info->dongle_features[feature_count]) {
-						memcpy(board_info->dongle_features[feature_count],
+					board_info->bridge_features[feature_count] = malloc(token_len + 1);
+					if (board_info->bridge_features[feature_count]) {
+						memcpy(board_info->bridge_features[feature_count],
 						       token_start, token_len);
-						board_info->dongle_features[feature_count][token_len] = '\0';
+						board_info->bridge_features[feature_count][token_len] = '\0';
 						feature_count++;
 					}
 				}

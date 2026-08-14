@@ -48,7 +48,7 @@ static struct board_info board_info;
 static uint8_t eeprom_detected_dev_addr;
 static bool valid_eeprom_addr_detected;
 
-static bool dongle_feature_exists(const char *feature)
+static bool bridge_feature_exists(const char *feature)
 {
 	int i;
 
@@ -56,8 +56,8 @@ static bool dongle_feature_exists(const char *feature)
 		return false;
 	}
 
-	for (i = 0; i < MAX_DONGLE_FEATURE && board_info.dongle_features[i] != NULL; i++) {
-		if (!strcmp(board_info.dongle_features[i], feature)) {
+	for (i = 0; i < MAX_BRIDGE_FEATURE && board_info.bridge_features[i] != NULL; i++) {
+		if (!strcmp(board_info.bridge_features[i], feature)) {
 			return true;
 		}
 	}
@@ -65,7 +65,7 @@ static bool dongle_feature_exists(const char *feature)
 	return false;
 }
 
-static int32_t add_dongle_features_attr(struct iio_ctx_attr *context_attributes,
+static int32_t add_bridge_features_attr(struct iio_ctx_attr *context_attributes,
 		uint8_t *cnt)
 {
 	const char *peripherals[] = { "i2c", "gpio", "pwm", "swire", "uart", "spi" };
@@ -78,7 +78,7 @@ static int32_t add_dongle_features_attr(struct iio_ctx_attr *context_attributes,
 	}
 
 	for (i = 0; i < sizeof(peripherals) / sizeof(peripherals[0]); i++) {
-		const char *prefix = dongle_feature_exists(peripherals[i]) ? "*" : "";
+		const char *prefix = bridge_feature_exists(peripherals[i]) ? "*" : "";
 
 		offset += snprintf(features_str + offset, sizeof(features_str) - offset,
 				   "%s%s%s",
@@ -94,7 +94,7 @@ static int32_t add_dongle_features_attr(struct iio_ctx_attr *context_attributes,
 		}
 
 		strcpy(features_copy, features_str);
-		(context_attributes + *cnt)->name = "dongle_features";
+		(context_attributes + *cnt)->name = "bridge_features";
 		(context_attributes + *cnt)->value = features_copy;
 		(*cnt)++;
 	}
@@ -473,7 +473,7 @@ int32_t get_iio_context_attributes_ex(struct iio_ctx_attr **ctx_attr,
 		cnt++;
 	}
 
-	ret = add_dongle_features_attr(context_attributes, &cnt);
+	ret = add_bridge_features_attr(context_attributes, &cnt);
 	if (ret) {
 		no_os_free(context_attributes);
 		return ret;
